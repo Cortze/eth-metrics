@@ -15,6 +15,7 @@ var ReleaseVersion = "custom-build"
 type Config struct {
 	PoolName              string
 	Network               string
+	CustomValidatorFile   string
 	WithdrawalCredentials []string
 	FromAddress           []string
 	BeaconRpcEndpoint     string
@@ -44,6 +45,7 @@ func NewCliConfig() (*Config, error) {
 	flag.Var(&fromAddress, "from-address", "Wallet addresses used to deposit. Can be used multiple times")
 
 	var network = flag.String("network", "mainnet", "Ethereum 2.0 network mainnet|prater|pyrmont")
+	var customValidatorFile = flag.String("validator-file", "custom_validators.json", "file containing list of custom validators")
 	var beaconRpcEndpoint = flag.String("beacon-rpc-endpoint", "localhost:4000", "Address:Port of a eth2 beacon node endpoint")
 	var prometheusPort = flag.Int("prometheus-port", 9500, "Prometheus port to listen to")
 	var version = flag.Bool("version", false, "Prints the release version and exits")
@@ -75,6 +77,7 @@ func NewCliConfig() (*Config, error) {
 	conf := &Config{
 		PoolName:              *poolName,
 		Network:               *network,
+		CustomValidatorFile:   *customValidatorFile,
 		BeaconRpcEndpoint:     *beaconRpcEndpoint,
 		PrometheusPort:        *prometheusPort,
 		WithdrawalCredentials: withdrawalCredentials,
@@ -89,6 +92,7 @@ func NewCliConfig() (*Config, error) {
 func logConfig(cfg *Config) {
 	log.WithFields(log.Fields{
 		"PoolName":              cfg.PoolName,
+		"CustomValidatorFile":   cfg.CustomValidatorFile,
 		"BeaconRpcEndpoint":     cfg.BeaconRpcEndpoint,
 		"WithdrawalCredentials": cfg.WithdrawalCredentials,
 		"FromAddress":           cfg.FromAddress,

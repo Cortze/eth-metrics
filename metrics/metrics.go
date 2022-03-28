@@ -46,6 +46,19 @@ func NewMetrics(
 	ctx context.Context,
 	config *config.Config) (*Metrics, error) {
 
+	metrics := &Metrics{}
+
+	// Check weather we selected a custom pool to analyze or if it's one of the already supported one
+	if config.PoolName == "custom" {
+		// since is a custom one, read the json file with the key of the validators
+		keys, err := ReadCustomValidatorsFile(config.CustomValidatorFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to parse validator pubkeys from json file "+config.CustomValidatorFile)
+		}
+		metrics.depositedKeys = keys
+		metrics.validatingKeys = keys
+	}
+
 	theGraph, err := thegraph.NewThegraph(
 		config.Network,
 		config.WithdrawalCredentials,
@@ -91,26 +104,29 @@ func NewMetrics(
 		}
 	}
 
-	return &Metrics{
-		prysmConcurrent:   prysmConcurrent,
-		theGraph:          theGraph,
-		beaconChainClient: beaconClient,
-		validatorClient:   validatorClient,
-		nodeClient:        nodeClient,
-		withCredList:      config.WithdrawalCredentials,
-		fromAddrList:      config.FromAddress,
-		genesisSeconds:    uint64(genesis.GenesisTime.Seconds),
-		slotsInEpoch:      uint64(slotsInEpoch),
-		eth1Address:       config.Eth1Address,
-		postgresql:        pg,
-		PoolName:          config.PoolName,
-	}, nil
+	metrics.prysmConcurrent = prysmConcurrent
+	metrics.theGraph = theGraph
+	metrics.beaconChainClient = beaconClient
+	metrics.validatorClient = validatorClient
+	metrics.nodeClient = nodeClient
+	metrics.withCredList = config.WithdrawalCredentials
+	metrics.fromAddrList = config.FromAddress
+	metrics.genesisSeconds = uint64(genesis.GenesisTime.Seconds)
+	metrics.slotsInEpoch = uint64(slotsInEpoch)
+	metrics.eth1Address = config.Eth1Address
+	metrics.postgresql = pg
+	metrics.PoolName = config.PoolName
+
+	return metrics, nil
 }
 
 func (a *Metrics) Run() {
+	// only fetch new deposits, if there is a whale pool geting monitorized
+	if a.PoolName != "custom" {
+		go a.StreamDeposits()
+	}
 	go a.StreamDuties()
 	go a.StreamRewards()
-	go a.StreamDeposits()
 	go a.StreamValidatorPerformance()
 	go a.StreamValidatorStatus()
 }
